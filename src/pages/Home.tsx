@@ -3,7 +3,7 @@ import { Component, createSignal } from "solid-js";
 import { startBracket } from "../stores/bracket.store";
 
 const Home: Component = () => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
   const [bracketName, setBracketName] = createSignal("");
   const [players, setPlayers] = createSignal("");
