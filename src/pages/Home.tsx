@@ -1,6 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import { Component, createSignal } from "solid-js";
-import { startBracket } from "../stores/bracket.store";
+import { Players } from "../helpers/tournament-generator";
+import bracketStore from "../stores/bracket.store";
 
 const Home: Component = () => {
   const navigate = useNavigate();
@@ -8,8 +9,13 @@ const Home: Component = () => {
   const [bracketName, setBracketName] = createSignal("");
   const [players, setPlayers] = createSignal("");
 
+  const { startBracket } = bracketStore;
+
   const onSubmit = () => {
-    startBracket(bracketName(), players().split("\n"));
+    const title = bracketName() || "Tournament";
+    const playersArray = players().split("\n").filter((p) => p !== "");
+    if (playersArray.length < 2) return alert("Please enter at least 2 players");
+    startBracket(title, playersArray as Players);
     navigate("/bracket");
   };
 

@@ -1,23 +1,15 @@
-export type Match = {
-  players: PlayersPair | MatchPair;
-  winner?: string;
-};
+import { isLeaf } from "./tournament";
+import type { Match, PlayersPair } from "./tournament";
+import bracketsStore from "../stores/bracket.store";
+
+export type Players = [string, string, ...string[]];
 
 const enum Action {
   Insert = "insert",
   Wrap = "wrap",
 }
 
-type PlayersPair = [string, string];
-type MatchPair = [Match, Match];
-
-const isLeaf = (match: Match): boolean => {
-  return (
-    typeof match.players[0] === "string" && typeof match.players[1] === "string"
-  );
-};
-
-const pairPlayers = (players: string[]) => {
+const pairPlayers = (players: Players) => {
   return players.reduce<PlayersPair[]>((acc, player, index) => {
     if (index % 2 === 0) {
       if (index === players.length - 1) {
@@ -30,13 +22,10 @@ const pairPlayers = (players: string[]) => {
 };
 
 const matchWeights = (match: Match) => {
-  return match.players.map((player) => matchWeight(player) + 1) as [
-    number,
-    number
-  ];
+  return match.players.map((player) => matchWeight(player)) as [number, number];
 };
 
-const matchWeight = (match: Match | string): number => {
+export const matchWeight = (match: Match | string): number => {
   if (typeof match === "string") return 1;
   const [leftValue, rightValue] = matchWeights(match);
   return leftValue + rightValue;
@@ -51,23 +40,34 @@ const getAction = (match: Match): Action => {
   return Action.Insert;
 };
 
+type InsertParams = { first: Match; second: Match; players: PlayersPair };
+
+const insertLeft = ({ first, second, players }: InsertParams): Match => ({
+  players: [insertMatch(first, players), second],
+});
+
+const insertRight = ({ first, second, players }: InsertParams): Match => ({
+  players: [first, insertMatch(second, players)],
+});
+
 const insertMatch = (root: Match, players: PlayersPair): Match => {
   if (isLeaf(root)) {
     return { players: [root, { players }] };
   }
 
   const [firstValue, secondValue] = matchWeights(root);
-  const [firstMatch, secondMatch] = root.players as MatchPair;
+  const [firstMatch, secondMatch] = root.players;
 
-  if (firstValue < secondValue) {
-    return {
-      players: [insertMatch(firstMatch, players), secondMatch],
-    };
+  console.log("insertMatch", { firstValue, secondValue, root, players });
+
+  if (firstValue > secondValue) {
+    if (secondValue % 4 === 0 && firstValue % 4 !== 0)
+      return insertLeft({ first: firstMatch, second: secondMatch, players });
+
+    return insertRight({ first: firstMatch, second: secondMatch, players });
   }
 
-  return {
-    players: [firstMatch, insertMatch(secondMatch, players)],
-  };
+  return insertLeft({ first: firstMatch, second: secondMatch, players });
 };
 
 const addInDirection = (
@@ -75,7 +75,7 @@ const addInDirection = (
   players: PlayersPair,
   action: Action
 ): Match => {
-  const [firstMatch, secondMatch] = match.players as MatchPair;
+  console.log("addInDirection", { match, players, action });
   switch (action) {
     case Action.Insert:
       return insertMatch(match, players);
@@ -83,27 +83,39 @@ const addInDirection = (
       if (isLeaf(match)) {
         return { players: [match, { players }] };
       }
+      const [firstMatch, secondMatch] = match.players;
       return {
         players: [{ players: [firstMatch, { players }] }, secondMatch],
       };
   }
 };
 
-export function createMatch({ players }: { players: string[] }): Match {
+export async function createMatch({
+  players,
+}: {
+  players: Players;
+}): Promise<Match> {
   // Sort players randomly
   const sortedPlayers = players.sort(() => Math.random() - 0.5);
+
+  const { setMatches } = bracketsStore;
 
   const pairs = pairPlayers(sortedPlayers);
   let root: Match | null = null;
 
   // Create matches
-  for (const pair of pairs) {
+  for await (const pair of pairs) {
     if (!root) {
       root = { players: pair };
       continue;
     }
 
     root = addInDirection(root, pair, getAction(root));
+    setMatches(root);
   }
   return root as Match;
 }
+
+// Promise to wait for a given number of seconds
+export const wait = (seconds: number) =>
+  new Promise((resolve) => setTimeout(resolve, seconds * 1000));

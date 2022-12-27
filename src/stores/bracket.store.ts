@@ -1,5 +1,7 @@
+import { createRoot } from "solid-js";
 import { createStore } from "solid-js/store";
-import { createMatch, Match } from "../helpers/tournament-generator";
+import { type Match } from "../helpers/tournament";
+import { createMatch, type Players } from "../helpers/tournament-generator";
 
 type BracketStore = {
   name: string;
@@ -7,16 +9,31 @@ type BracketStore = {
   matches: Match | null;
 };
 
-export const [bracketStore, setBracketStore] = createStore<BracketStore>({
-  name: "",
-  participants: [],
-  matches: null,
-});
-
-export const startBracket = (name: string, participants: string[]) => {
-  setBracketStore({
-    name,
-    participants,
-    matches: createMatch({ players: participants }),
+function createBracketStore() {
+  const [store, setStore] = createStore<BracketStore>({
+    name: "",
+    participants: [],
+    matches: null,
   });
-};
+
+  const startBracket = async (name: string, participants: Players) => {
+    setStore({
+      name,
+      participants,
+      matches: null,
+    });
+    await createMatch({ players: participants });
+  };
+
+  const setMatches = (matches: Match) =>
+    setStore((store) => ({ ...store, matches }));
+
+  return {
+    store,
+    setStore,
+    startBracket,
+    setMatches,
+  };
+}
+
+export default createRoot(createBracketStore);
