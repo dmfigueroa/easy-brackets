@@ -23,8 +23,10 @@ const Bracket: Component = () => {
           {title}
         </h1>
       </nav>
-      <div class="flex h-full justify-center">
-        <Tournament match={store.matches} />
+      <div class="w-full">
+        <div class="flex h-full justify-start mx-3">
+          <Tournament match={store.matches} />
+        </div>
       </div>
     </div>
   );
