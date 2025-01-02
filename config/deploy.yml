@@ -7,7 +7,7 @@ image: dfigueroa/easy-brackets
 # Deploy to these servers.
 servers:
   web:
-    - ryumi
+    - niika
   # job:
   #   hosts:
   #     - 192.168.0.1
